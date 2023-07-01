@@ -8,7 +8,6 @@ import (
 
 	"github.com/DangPhuongTay/travelblog-golang/database"
 	"github.com/DangPhuongTay/travelblog-golang/models"
-	"github.com/DangPhuongTay/travelblog-golang/util"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
@@ -88,12 +87,26 @@ func UpdatePost(c *fiber.Ctx) error {
 }
 
 func UniquePost(c *fiber.Ctx) error {
-	cookie := c.Cookies("jwt")
-	id, _ := util.Parsejwt(cookie)
-	var blog []models.Blog
-	database.DB.Model(&blog).Where("user_id=?", id).Preload("User").Find(&blog)
-
-	return c.JSON(blog)
+	// cookie := c.Cookies("jwt")
+	// id, _ := util.Parsejwt(cookie)
+	// var blog []models.Blog
+	// database.DB.Model(&blog).Where("user_id=?", id).Preload("User").Find(&blog)
+	// return c.JSON(blog)
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit := 20
+	offset := (page - 1) * limit
+	var total int64
+	var getblog []models.Blog
+	database.DB.Preload("User").Offset(offset).Limit(limit).Find(&getblog)
+	database.DB.Model(&models.Blog{}).Count(&total)
+	return c.JSON(fiber.Map{
+		"data": getblog,
+		"meta": fiber.Map{
+			"total":     total,
+			"page":      page,
+			"last_page": math.Ceil(float64(int(total) / limit)),
+		},
+	})
 }
 func DeletePost(c *fiber.Ctx) error {
 	id, _ := strconv.Atoi(c.Params("id"))
