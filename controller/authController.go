@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"log"
+	"math"
 	"regexp"
 	"strconv"
 	"strings"
@@ -22,7 +23,6 @@ func validateEmail(email string) bool {
 func Register(c *fiber.Ctx) error {
 	var data map[string]interface{}
 	var userData models.User
-
 	if err := c.BodyParser(&data); err != nil {
 		fmt.Println("Unable to parse body")
 	}
@@ -101,6 +101,32 @@ func Login(c *fiber.Ctx) error {
 		"message": "you have successfully login",
 		"user":    user,
 	})
+}
+func AllUser(c *fiber.Ctx) error {
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit := 10
+	offset := (page - 1) * limit
+	var total int64
+	var getusers []models.User
+	database.DB.Preload("User").Offset(offset).Limit(limit).Find(&getusers)
+	database.DB.Model(&models.User{}).Count(&total)
+	return c.JSON(fiber.Map{
+		"data": getusers,
+		"meta": fiber.Map{
+			"total":     total,
+			"page":      page,
+			"last_page": math.Ceil(float64(int(total) / limit)),
+		},
+	})
+}
+func DetailUser(c *fiber.Ctx) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	var bloguser models.User
+	database.DB.Where("id=?", id).Preload("User").First(&bloguser)
+	return c.JSON(fiber.Map{
+		"data": bloguser,
+	})
+
 }
 
 type Claims struct {

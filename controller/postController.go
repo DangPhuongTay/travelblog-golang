@@ -30,11 +30,29 @@ func CreatePost(c *fiber.Ctx) error {
 }
 func AllPost(c *fiber.Ctx) error {
 	page, _ := strconv.Atoi(c.Query("page", "1"))
-	limit := 5
+	limit := 20
 	offset := (page - 1) * limit
 	var total int64
 	var getblog []models.Blog
 	database.DB.Preload("User").Offset(offset).Limit(limit).Find(&getblog)
+	database.DB.Model(&models.Blog{}).Count(&total)
+	return c.JSON(fiber.Map{
+		"data": getblog,
+		"meta": fiber.Map{
+			"total":     total,
+			"page":      page,
+			"last_page": math.Ceil(float64(int(total) / limit)),
+		},
+	})
+}
+func UserIdPost(c *fiber.Ctx) error {
+	id, _ := strconv.Atoi(c.Params("id"))
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit := 10
+	offset := (page - 1) * limit
+	var total int64
+	var getblog []models.Blog
+	database.DB.Preload("User").Where("user_id=?", id).Offset(offset).Limit(limit).Find(&getblog)
 	database.DB.Model(&models.Blog{}).Count(&total)
 	return c.JSON(fiber.Map{
 		"data": getblog,
@@ -54,6 +72,7 @@ func DetailPost(c *fiber.Ctx) error {
 	})
 
 }
+
 func UpdatePost(c *fiber.Ctx) error {
 	id, _ := strconv.Atoi(c.Params("id"))
 	blog := models.Blog{
@@ -67,6 +86,7 @@ func UpdatePost(c *fiber.Ctx) error {
 		"message": "post update successfully",
 	})
 }
+
 func UniquePost(c *fiber.Ctx) error {
 	cookie := c.Cookies("jwt")
 	id, _ := util.Parsejwt(cookie)
